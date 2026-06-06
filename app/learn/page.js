@@ -511,11 +511,27 @@ export default function LearnPage() {
               <button className="ln-btn ln-btn-lime au d5" onClick={handleGenerate} disabled={loadingQ || !topic}>
                 {loadingQ ? <><Spinner size={16} color="#000" /> Generating…</> : <><Zap size={16} /> Generate AI Question</>}
               </button>
+
+              {/* Loading overlay inside SETUP */}
+              {loadingQ && (
+                <div style={{
+                  position: 'fixed', inset: 0, zIndex: 50,
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(6,7,13,0.85)', backdropFilter: 'blur(6px)',
+                  gap: 14
+                }}>
+                  <Spinner size={32} />
+                  <p style={{ color: 'var(--ln-muted)', fontSize: '0.88rem', fontWeight: 500 }}>
+                    Generating your AI question…
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
 
           {/* ══════════ CONCEPT CHOICE ══════════ */}
-          {step === STEP.CONCEPT && content && (
+          {step === STEP.CONCEPT && (
             <motion.div key="concept" variants={pv} initial="hidden" animate="show" exit="exit">
 
               {/* Meta */}
@@ -591,7 +607,7 @@ export default function LearnPage() {
           )}
 
           {/* ══════════ QUESTION ══════════ */}
-          {step === STEP.QUESTION && content && (
+          {step === STEP.QUESTION && (
             <motion.div key="question" variants={pv} initial="hidden" animate="show" exit="exit">
 
               {/* Meta */}
@@ -604,7 +620,7 @@ export default function LearnPage() {
               {/* Question */}
               <div className="ln-qbox au d1">
                 <div className="ln-qtag">🧮 Practice Problem</div>
-                <p className="ln-qtext">{content.word_problem || '—'}</p>
+                <p className="ln-qtext">{content?.word_problem || '—'}</p>
               </div>
 
               {/* Answer */}

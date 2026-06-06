@@ -322,11 +322,11 @@ export default function LeaderboardPage() {
       setLoading(false)
     }
   }
+const safeLeaders = Array.isArray(leaders) ? leaders : []
 
-  const top3 = leaders.slice(0, 3)
-  const rest = leaders.slice(3)
-  const peak = maxXp(leaders)
-
+const top3 = safeLeaders.slice(0, 3)
+const rest = safeLeaders.slice(3)
+const peak = maxXp(safeLeaders)
   // Reorder top3 for podium: [silver(1), gold(0), bronze(2)]
   const podiumSlots = [top3[1], top3[0], top3[2]]
 
