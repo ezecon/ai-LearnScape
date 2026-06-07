@@ -244,13 +244,16 @@ const fadeUp = {
 }
 
 export default function LoginPage() {
-  const { user, signInWithGoogle } = useAuth()
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
+const { user, loading: authLoading, signInWithGoogle } = useAuth()
+const router = useRouter()
+const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (user) router.replace('/dashboard')
-  }, [user, router])
+useEffect(() => {
+  if (authLoading) return
+  if (user) router.replace('/dashboard')
+}, [user, authLoading, router])
+
+if (authLoading) return null
 
   const handleGoogleLogin = async () => {
     setLoading(true)

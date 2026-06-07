@@ -8,12 +8,16 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
+import { History } from 'lucide-react'
+
+// NAV array তে যোগ করো:
 
 const NAV = [
   { href: '/dashboard',       icon: LayoutDashboard, label: 'Dashboard',       accent: '#c8ff00' },
   { href: '/learn',           icon: BookOpen,        label: 'Learn',           accent: '#00ffb3' },
   { href: '/recommendations', icon: Lightbulb,       label: 'Recommendations', accent: '#ff7c2a' },
   { href: '/leaderboard',     icon: Trophy,          label: 'Leaderboard',     accent: '#facc15' },
+  { href: '/history',         icon: History,         label: 'History',         accent: '#6ee7ff' },
 ]
 
 const css = `

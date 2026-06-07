@@ -232,3 +232,41 @@ export async function getLeaderboard() {
   return res.json()
 }
 
+// Question history save করো (generate হওয়ার পরে call করো)
+export async function saveQuestionHistory(data) {
+  const token = await getToken()
+  const res = await fetch(`${BASE_URL}/history/save`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  })
+  return res.json()
+}
+
+// Answer submit হওয়ার পরে result update করো
+export async function updateQuestionHistory(historyId, studentAnswer, isCorrect) {
+  const token = await getToken()
+  const res = await fetch(
+    `${BASE_URL}/history/update/${historyId}?student_answer=${encodeURIComponent(studentAnswer)}&is_correct=${isCorrect}`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  )
+  return res.json()
+}
+
+// History list পাও
+export async function getQuestionHistory(userId, limit = 20) {
+  const token = await getToken()
+  const res = await fetch(
+    `${BASE_URL}/history/${userId}?limit=${limit}`,
+    {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+  )
+  return res.json()
+}

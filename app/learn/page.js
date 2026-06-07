@@ -9,7 +9,7 @@ import {
 
 import AppLayout from '@/components/layout/AppLayout'
 import { Spinner } from '@/components/ui'
-import { generateQuestion, submitAnswer, getRemediation } from '@/services/api'
+import { generateQuestion, submitAnswer, getRemediation, saveQuestionHistory, updateQuestionHistory } from '@/services/api'
 import { useAuth } from '@/lib/AuthContext'
 import { TOPICS_BY_CLASS, ENVIRONMENTS, CLASS_LEVELS, getTopicIcon } from '@/lib/curriculum'
 import toast from 'react-hot-toast'
@@ -400,7 +400,7 @@ const slideUp = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function LearnPage() {
   const { user } = useAuth()
-
+  const [historyId, setHistoryId] = useState(null)
   const [step, setStep]               = useState(STEP.SETUP)
   const [classLevel, setClassLevel]   = useState(8)
   const [topic, setTopic]             = useState('')
@@ -439,21 +439,39 @@ export default function LearnPage() {
   }
 
   // ── Generate question ───────────────────────────────────────────────────────
-  const handleGenerate = async () => {
-    if (!topic) { toast.error('Select a topic first'); return }
-    setLoadingQ(true)
-    resetAll()
+const handleGenerate = async () => {
+  if (!topic) { toast.error('Select a topic first'); return }
+  setLoadingQ(true)
+  resetAll()
+  try {
+    const res = await generateQuestion(user?.id || 'guest', topic, environment, classLevel)
+    const parsed = typeof res.content === 'string' ? parseContent(res.content) : res.content
+    setContent(parsed)
+    setStep(STEP.CONCEPT)
+
+    // ← এখানে history save
     try {
-      const res = await generateQuestion(user?.id || 'guest', topic, environment, classLevel)
-      const parsed = typeof res.content === 'string' ? parseContent(res.content) : res.content
-      setContent(parsed)
-      setStep(STEP.CONCEPT)
+      const saved = await saveQuestionHistory({
+        topic,
+        environment,
+        class_level: classLevel,
+        question: parsed?.word_problem || '',
+        correct_answer: parsed?.answer || '',
+        student_answer: null,
+        is_correct: 'pending',
+        full_content: JSON.stringify(parsed)
+      })
+      if (saved?.id) setHistoryId(saved.id)
     } catch (e) {
-      toast.error(e.message || 'Failed to generate question')
-    } finally {
-      setLoadingQ(false)
+      console.error('History save failed:', e)
     }
+
+  } catch (e) {
+    toast.error(e.message || 'Failed to generate question')
+  } finally {
+    setLoadingQ(false)
   }
+}
 
   // ── Submit: check answer then call backend ─────────────────────────────────
   const handleSubmit = async () => {
@@ -475,7 +493,14 @@ export default function LearnPage() {
       setSubmitResult(res)
       setSessionScore(s => ({ correct: s.correct + (is_correct ? 1 : 0), total: s.total + 1 }))
       setStep(STEP.RESULT)
-
+      // history update
+      if (historyId) {
+        try {
+          await updateQuestionHistory(historyId, answer, String(is_correct))
+        } catch (e) {
+          console.error('History update failed:', e)
+        }
+      }
       // 3. If wrong → fetch remediation in background
       if (!is_correct) {
         setLoadingRem(true)
