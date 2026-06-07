@@ -20,58 +20,121 @@ const STEP = { SETUP: 'setup', CONCEPT: 'concept', QUESTION: 'question', RESULT:
 // ─── Parse API string response ────────────────────────────────────────────────
 function parseContent(raw) {
   if (typeof raw !== 'string') return raw
-  const get = (label, next) => {
-    const pattern = next
-      ? new RegExp(`${label}:?\\s*([\\s\\S]*?)(?=${next}:|$)`, 'i')
-      : new RegExp(`${label}:?\\s*([\\s\\S]*)$`, 'i')
-    const m = raw.match(pattern)
+
+  // Debug — remove after fix confirmed
+  console.log('RAW CONTENT:', raw.slice(0, 300))
+
+  // Clean markdown bold/italic
+  const clean = raw
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+
+  // Strategy 1: ### Header format
+  const getSection = (label, nextLabel) => {
+    const esc = s => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
+    const pattern = nextLabel
+      ? new RegExp(`###?\\s*${esc(label)}[:\\s]*([\\s\\S]*?)(?=###|$)`, 'i')
+      : new RegExp(`###?\\s*${esc(label)}[:\\s]*([\\s\\S]*)$`, 'i')
+    const m = clean.match(pattern)
     return m ? m[1].trim() : ''
   }
+
+  // Strategy 2: Plain "Label:" format (no ###)
+  const getPlain = (label, nextLabel) => {
+    const esc = s => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
+    const pattern = nextLabel
+      ? new RegExp(`${esc(label)}\\s*:?\\s*([\\s\\S]*?)(?=${esc(nextLabel)}\\s*:|$)`, 'i')
+      : new RegExp(`${esc(label)}\\s*:?\\s*([\\s\\S]*)$`, 'i')
+    const m = clean.match(pattern)
+    return m ? m[1].trim() : ''
+  }
+
+  // Try ### format first, fallback to plain
+  const get = (label, next) => {
+    const s1 = getSection(label, next)
+    if (s1) return s1
+    return getPlain(label, next)
+  }
+
+  const concept     = get('Concept Explanation', 'Example')
+  const example     = get('Example', 'Word Problem')
+  const wordProblem = get('Word Problem', 'Answer')
+  const answer      = get('Answer', 'Step-by-Step Solution') || get('Answer', 'Step')
+  const stepsRaw    = get('Step-by-Step Solution', '')
+
+  console.log('PARSED:', { concept: concept.slice(0,50), wordProblem: wordProblem.slice(0,50), answer })
+
   return {
-    concept_explanation: get('Concept Explanation', 'Example'),
-    example:             get('Example', 'Word Problem'),
-    word_problem:        get('Word Problem', 'Answer'),
-    answer:              get('Answer', 'Step'),
-    step_by_step_solution: get('Step-by-Step Solution')
-      .split('\n').filter(l => l.trim())
-      .map(l => l.replace(/^[-*•\d.]+\s*/, '').trim()).filter(Boolean),
+    concept_explanation: concept,
+    example,
+    word_problem: wordProblem,
+    answer,
+    step_by_step_solution: stepsRaw
+      .split('\n')
+      .filter(l => l.trim())
+      .map(l => l.replace(/^\s*\d+\.\s*|^[-*•]\s*/, '').trim())
+      .filter(Boolean),
   }
 }
 
-// ─── AI answer checker via Anthropic API ──────────────────────────────────────
-async function checkAnswerWithAI(question, correctAnswer, studentAnswer) {
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `You are a math teacher checking a student's answer.
+// ─── Extract numeric value from answer (handles LaTeX fractions) ──────────────
+function extractAnswerValue(s) {
+  const str = String(s ?? '')
 
-Question: ${question}
-Correct Answer: ${correctAnswer}
-Student's Answer: ${studentAnswer}
+  // LaTeX fraction: \frac{3}{5} → 3/5 → 0.6
+  const latexFrac = str.match(/\\frac\{(\d+)\}\{(\d+)\}/)
+  if (latexFrac) return parseFloat(latexFrac[1]) / parseFloat(latexFrac[2])
 
-Is the student's answer correct? Consider equivalent forms, rounding, and partial credit.
-Respond ONLY with valid JSON, no markdown, no extra text:
-{"is_correct": true or false, "feedback": "one short encouraging sentence"}`
-        }]
-      })
-    })
-    const data = await response.json()
-    const text = data.content?.[0]?.text || '{}'
-    const parsed = JSON.parse(text)
-    return { is_correct: !!parsed.is_correct, feedback: parsed.feedback || '' }
-  } catch {
-    // fallback: simple string match
-    const norm = s => s.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9.]/g, '')
-    return { is_correct: norm(studentAnswer) === norm(correctAnswer), feedback: '' }
-  }
+  // Plain fraction: 3/5
+  const plainFrac = str.match(/(\d+)\s*\/\s*(\d+)/)
+  if (plainFrac) return parseFloat(plainFrac[1]) / parseFloat(plainFrac[2])
+
+  // Dollar-sign wrapped: $3/5$ or $\frac{3}{5}$
+  const dollarFrac = str.match(/\$\\frac\{(\d+)\}\{(\d+)\}\$/)
+  if (dollarFrac) return parseFloat(dollarFrac[1]) / parseFloat(dollarFrac[2])
+
+  // Plain number
+  const num = str.match(/[\d.]+/)
+  if (num) return parseFloat(num[0])
+
+  return null
 }
 
+// ─── Smart answer checker ─────────────────────────────────────────────────────
+function checkAnswerWithAI(question, correctAnswer, studentAnswer) {
+  const norm = s => String(s ?? '').toLowerCase().trim().replace(/\s+/g, ' ')
+
+  const correct = norm(correctAnswer)
+  const student = norm(studentAnswer)
+
+  // 1. Exact normalized match
+  if (correct === student) return { is_correct: true, feedback: 'Spot on! Perfect answer.' }
+
+  // 2. Strip non-alphanumeric
+  const strip = s => s.replace(/[^a-z0-9]/g, '')
+  if (strip(correct) === strip(student)) return { is_correct: true, feedback: 'Correct! Well done.' }
+
+  // 3. Numeric/fraction comparison (handles LaTeX, fractions, decimals)
+  const correctVal = extractAnswerValue(correctAnswer)
+  const studentVal = extractAnswerValue(studentAnswer)
+  if (correctVal !== null && studentVal !== null) {
+    if (Math.abs(correctVal - studentVal) < 0.011) {
+      return { is_correct: true, feedback: 'Great job, your answer is correct!' }
+    }
+  }
+
+  // 4. Key word match (for text answers)
+  const correctWords = correct.split(' ').filter(w => w.length > 3)
+  const studentWords = student.split(' ')
+  if (correctWords.length > 0) {
+    const matchCount = correctWords.filter(w =>
+      studentWords.some(sw => sw.includes(w) || w.includes(sw))
+    ).length
+    if (matchCount / correctWords.length >= 0.75) return { is_correct: true, feedback: 'Correct! Nice work.' }
+  }
+
+  return { is_correct: false, feedback: "Not quite — let's work through it together." }
+}
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const GlobalStyles = () => (
   <style>{`
@@ -392,24 +455,22 @@ export default function LearnPage() {
     }
   }
 
-  // ── Submit: AI checks answer, then calls backend ────────────────────────────
+  // ── Submit: check answer then call backend ─────────────────────────────────
   const handleSubmit = async () => {
     if (!answer.trim()) { toast.error('Write your answer first'); return }
 
-    setLoadingCheck(true)
+    setLoadingSub(true)
     try {
-      // 1. AI checks the answer
-      const { is_correct, feedback } = await checkAnswerWithAI(
-        content.word_problem,
-        content.answer,
+      // 1. Client-side smart check (synchronous)
+      const { is_correct, feedback } = checkAnswerWithAI(
+        content?.word_problem,
+        content?.answer,
         answer
       )
       setIsCorrect(is_correct)
       setAiFeedback(feedback)
-      setLoadingCheck(false)
 
       // 2. Tell backend
-      setLoadingSub(true)
       const res = await submitAnswer(topic, is_correct)
       setSubmitResult(res)
       setSessionScore(s => ({ correct: s.correct + (is_correct ? 1 : 0), total: s.total + 1 }))
@@ -426,7 +487,6 @@ export default function LearnPage() {
       }
     } catch (e) {
       toast.error(e.message || 'Something went wrong')
-      setLoadingCheck(false)
     } finally {
       setLoadingSub(false)
     }
@@ -573,20 +633,20 @@ export default function LearnPage() {
 
               {/* Concept content (expands) */}
               <AnimatePresence>
-                {conceptShown && (
+                {conceptShown && content && (
                   <motion.div key="cexp" variants={slideUp} initial="hidden" animate="show" exit={{ opacity: 0, height: 0 }}>
                     <div className="ln-reveal-card" style={{ borderColor: 'rgba(96,165,250,0.2)', background: 'linear-gradient(135deg,rgba(96,165,250,0.06),rgba(14,16,24,0) 65%)' }}>
                       <div className="ln-reveal-title" style={{ color: 'var(--ln-blue)' }}>
                         <BookOpen size={12} /> Concept Explanation
                       </div>
-                      <p className="ln-reveal-body">{content.concept_explanation || '—'}</p>
+                      <p className="ln-reveal-body">{content?.concept_explanation || '—'}</p>
 
-                      {content.example && (
+                      {content?.example && (
                         <div className="ln-example-box" style={{ marginTop: '0.9rem' }}>
                           <div style={{ fontSize: '0.62rem', fontWeight: 700, color: 'var(--ln-orange)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Lightbulb size={11} /> Example
                           </div>
-                          <p className="ln-reveal-body">{content.example}</p>
+                          <p className="ln-reveal-body">{content?.example}</p>
                         </div>
                       )}
                     </div>
@@ -632,19 +692,19 @@ export default function LearnPage() {
                   value={answer}
                   onChange={e => setAnswer(e.target.value)}
                   placeholder="Write your working and answer here…"
-                  disabled={loadingCheck || loadingSub}
+                  disabled={loadingSub}
                 />
 
-                {/* AI checking indicator */}
-                {(loadingCheck || loadingSub) && (
+                {/* Submitting indicator */}
+                {loadingSub && (
                   <div className="ln-checking">
                     <Spinner size={16} color="var(--ln-purple)" />
-                    {loadingCheck ? 'AI is checking your answer…' : 'Saving result…'}
+                    Checking your answer…
                   </div>
                 )}
 
                 {/* Submit button */}
-                {!loadingCheck && !loadingSub && (
+                {!loadingSub && (
                   <button
                     className="ln-btn ln-btn-lime"
                     style={{ marginTop: 10, borderRadius: 12, padding: '0.8rem' }}
@@ -693,20 +753,20 @@ export default function LearnPage() {
                   </button>
 
                   <AnimatePresence>
-                    {showExplanation && (
+                    {showExplanation && content && (
                       <motion.div key="expl" variants={slideUp} initial="hidden" animate="show" exit={{ opacity: 0 }}>
                         <div className="ln-reveal-card" style={{ borderColor: 'rgba(96,165,250,0.18)' }}>
-                          {content.concept_explanation && (
+                          {content?.concept_explanation && (
                             <div style={{ marginBottom: '1rem' }}>
                               <div className="ln-reveal-title" style={{ color: 'var(--ln-blue)' }}><BookOpen size={12} /> Concept</div>
-                              <p className="ln-reveal-body">{content.concept_explanation}</p>
+                              <p className="ln-reveal-body">{content?.concept_explanation}</p>
                             </div>
                           )}
-                          {content.step_by_step_solution?.length > 0 && (
+                          {content?.step_by_step_solution?.length > 0 && (
                             <div>
                               <div className="ln-reveal-title" style={{ color: 'var(--ln-amber)' }}><Sparkles size={12} /> Step-by-step</div>
                               <div className="ln-steps-list">
-                                {content.step_by_step_solution.map((s, i) => (
+                                {content?.step_by_step_solution?.map((s, i) => (
                                   <div key={i} className="ln-step-row">
                                     <div className="ln-step-badge">{i + 1}</div>
                                     <div className="ln-step-text">{s}</div>
@@ -756,7 +816,7 @@ export default function LearnPage() {
                       <div className="ln-reveal-card" style={{ borderColor: 'rgba(96,165,250,0.2)', background: 'linear-gradient(135deg,rgba(96,165,250,0.06),rgba(14,16,24,0) 65%)' }}>
                         <div className="ln-reveal-title" style={{ color: 'var(--ln-blue)' }}><BookOpen size={12} /> Concept Explanation</div>
                         <p className="ln-reveal-body">
-                          {remediation?.remediation_content?.concept_explanation || content.concept_explanation || '—'}
+                          {remediation?.remediation_content?.concept_explanation || content?.concept_explanation || '—'}
                         </p>
 
                         {!showExample && (
@@ -773,7 +833,7 @@ export default function LearnPage() {
                             <div className="ln-reveal-card" style={{ borderColor: 'rgba(249,115,22,0.2)' }}>
                               <div className="ln-reveal-title" style={{ color: 'var(--ln-orange)' }}><Lightbulb size={12} /> Worked Example</div>
                               <div className="ln-example-box">
-                                <p className="ln-reveal-body">{remediation?.remediation_content?.example || content.example || '—'}</p>
+                                <p className="ln-reveal-body">{remediation?.remediation_content?.example || content?.example || '—'}</p>
                               </div>
                               {!showSteps && (
                                 <button className="ln-btn ln-btn-ghost" style={{ marginTop: '0.9rem' }} onClick={() => setShowSteps(true)}>
@@ -784,12 +844,12 @@ export default function LearnPage() {
 
                             {/* Steps */}
                             <AnimatePresence>
-                              {showSteps && content.step_by_step_solution?.length > 0 && (
+                              {showSteps && content?.step_by_step_solution?.length > 0 && (
                                 <motion.div key="st" variants={slideUp} initial="hidden" animate="show">
                                   <div className="ln-reveal-card" style={{ borderColor: 'rgba(245,158,11,0.2)' }}>
                                     <div className="ln-reveal-title" style={{ color: 'var(--ln-amber)' }}><Zap size={12} /> Step-by-step Solution</div>
                                     <div className="ln-steps-list">
-                                      {content.step_by_step_solution.map((s, i) => (
+                                      {content?.step_by_step_solution?.map((s, i) => (
                                         <div key={i} className="ln-step-row">
                                           <div className="ln-step-badge">{i + 1}</div>
                                           <div className="ln-step-text">{s}</div>
@@ -805,11 +865,11 @@ export default function LearnPage() {
 
                                   {/* Answer reveal */}
                                   <AnimatePresence>
-                                    {showAnswer && content.answer && (
+                                    {showAnswer && content?.answer && (
                                       <motion.div key="ans" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 22 }}>
                                         <div className="ln-reveal-card" style={{ borderColor: 'rgba(34,197,94,0.28)' }}>
                                           <div className="ln-reveal-title" style={{ color: 'var(--ln-green)' }}><CheckCircle size={12} /> Correct Answer</div>
-                                          <div className="ln-answer-box">{content.answer}</div>
+                                          <div className="ln-answer-box">{content?.answer}</div>
                                           {remediation?.recommendation?.recommendation && (
                                             <div style={{ marginTop: '0.8rem', fontSize: '0.8rem', color: 'var(--ln-muted)', fontStyle: 'italic' }}>
                                               💬 {remediation.recommendation.recommendation}
