@@ -9,6 +9,7 @@ import { StatCard, CardSkeleton, EmptyState, ProgressBar, Skeleton } from '@/com
 import { getAnalytics, getMastery, getWeakTopics, getRecommendation, getRemediation } from '@/services/api'
 import { useAuth } from '@/lib/AuthContext'
 import { parseBadges } from '@/lib/curriculum'
+import { useLanguage } from '@/lib/LanguageContext'
 
 /* ─── Inline design tokens & component styles ─── */
 const styles = `
@@ -27,7 +28,6 @@ const styles = `
     font-family: 'DM Sans', sans-serif;
   }
 
-  /* ── ambient orbs ── */
   .dash-bg {
     position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
   }
@@ -40,7 +40,6 @@ const styles = `
   .orb-3 { width:300px; height:300px; top:40%; left:50%; background:var(--orange); opacity:0.1; animation-delay:-12s; }
   @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(30px,40px) scale(1.06); } }
 
-  /* ── layout ── */
   .dash-wrap {
     position: relative; z-index: 1;
     max-width: 820px; margin: 0 auto; padding: 1.5rem 1rem 6rem;
@@ -49,7 +48,6 @@ const styles = `
     .dash-wrap { padding: 2rem 1.5rem 5rem; }
   }
 
-  /* ── welcome ── */
   .welcome-eyebrow {
     font-family:'Syne',sans-serif; font-size:0.65rem; font-weight:700;
     letter-spacing:0.18em; text-transform:uppercase; color:var(--lime);
@@ -69,7 +67,6 @@ const styles = `
     margin: 0.8rem 0 1.5rem;
   }
 
-  /* ── glass card ── */
   .g-card {
     background: linear-gradient(160deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 100%);
     border: 1px solid rgba(255,255,255,0.11);
@@ -83,20 +80,17 @@ const styles = `
       0 8px 32px rgba(0,0,0,0.35),
       0 2px 8px rgba(0,0,0,0.2);
   }
-  /* top-edge highlight */
   .g-card::before {
     content:''; position:absolute; top:0; left:0; right:0; height:1px;
     background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 40%, rgba(255,255,255,0.06) 100%);
     pointer-events:none; z-index:1;
   }
-  /* inner sheen */
   .g-card::after {
     content:''; position:absolute; inset:0;
     background: linear-gradient(160deg, rgba(255,255,255,0.04) 0%, transparent 45%);
     pointer-events:none; border-radius:inherit;
   }
 
-  /* ── stat grid: 2×2 on mobile, 4-col on desktop ── */
   .stat-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -134,7 +128,6 @@ const styles = `
   .stat-bar   { height:3px; border-radius:99px; margin-top:0.3rem; background:rgba(255,255,255,0.08); overflow:hidden; }
   .stat-bar-fill { height:100%; border-radius:99px; transition:width 1.2s cubic-bezier(.22,1,.36,1); }
 
-  /* ── progress hero ── */
   .progress-hero {
     padding: 1.25rem;
     margin-bottom: 1rem;
@@ -189,11 +182,9 @@ const styles = `
     font-size:0.68rem; color:rgba(255,255,255,0.7);
   }
 
-  /* ── 2-col grid: always 1-col on mobile ── */
   .two-col { display:grid; grid-template-columns:1fr; gap:0.875rem; margin-bottom:1rem; }
   @media(min-width:560px){ .two-col { grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.25rem; } }
 
-  /* ── card inner ── */
   .card-inner {
     padding:1.2rem;
     box-shadow: 0 12px 40px rgba(0,0,0,0.38), 0 2px 8px rgba(0,0,0,0.22);
@@ -207,7 +198,6 @@ const styles = `
     flex-shrink:0;
   }
 
-  /* ── weak topics ── */
   .weak-row {
     display:flex; justify-content:space-between; align-items:center;
     padding:0.55rem 0.85rem; border-radius:12px; margin-bottom:6px;
@@ -218,7 +208,6 @@ const styles = `
   .weak-name { font-size:0.82rem; color:#fca5a5; font-weight:500; }
   .weak-pct  { font-size:0.72rem; font-weight:800; color:#ff4d6d; background:rgba(255,77,109,0.15); padding:2px 7px; border-radius:999px; }
 
-  /* ── mastery score card ── */
   .mastery-big { font-family:'Syne',sans-serif; font-size:2.8rem; font-weight:800; color:var(--lime); line-height:1; }
   .mastery-denom { font-size:0.9rem; font-weight:400; color:var(--muted); }
   .mastery-level-badge {
@@ -227,7 +216,6 @@ const styles = `
     border:1px solid rgba(200,255,0,0.25);
   }
 
-  /* ── recommendation ── */
   .rec-chip {
     display:inline-block; font-size:0.68rem; font-weight:700; text-transform:uppercase;
     letter-spacing:0.1em; color:var(--orange); background:rgba(255,124,42,0.12);
@@ -244,7 +232,6 @@ const styles = `
   }
   .view-btn:hover { background:rgba(255,124,42,0.15); }
 
-  /* ── remediation ── */
   .rem-topic {
     font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em;
     color:var(--emerald); margin-bottom:0.6rem;
@@ -255,7 +242,6 @@ const styles = `
     border-left:2px solid rgba(0,255,179,0.3); padding-left:0.65rem;
   }
 
-  /* ── CTA ── */
   .cta-card {
     text-align:center; padding:2rem 1.25rem;
     background:linear-gradient(135deg, rgba(200,255,0,0.07) 0%, rgba(0,255,179,0.04) 100%);
@@ -273,7 +259,6 @@ const styles = `
   }
   .cta-btn:hover { background:#d4ff1a; box-shadow:0 0 36px rgba(200,255,0,0.4); transform:translateY(-1px); }
 
-  /* ── divider label ── */
   .section-label {
     font-family:'Syne',sans-serif; font-size:0.65rem; font-weight:700;
     letter-spacing:0.18em; text-transform:uppercase; color:var(--muted);
@@ -299,7 +284,9 @@ function SectionIcon({ children, color }) {
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const { t } = useLanguage()        // ✅ এখানে — component এর ভেতরে, সব state এর আগে
   const router = useRouter()
+
   const [analytics, setAnalytics] = useState(null)
   const [mastery, setMastery] = useState(null)
   const [weakTopics, setWeakTopics] = useState([])
@@ -341,15 +328,17 @@ export default function DashboardPage() {
   const masteryScore = mastery?.mastery_score ?? 0
   const masteryLevel = mastery?.level ?? '—'
 
+  // ✅ statTiles এখানে — return এর আগে, component এর ভেতরে
   const statTiles = [
-    { icon:'⚡', label:'XP Earned',  value: xp.toLocaleString(), sub: 'Total points',   color:'#c8ff00', pct: Math.min((xp / 5000) * 100, 100) },
-    { icon:'🎯', label:'Level',      value: level,                sub: 'Keep climbing!', color:'#a3e635', pct: (level / 10) * 100 },
-    { icon:'🔥', label:'Streak',     value: `${streak}d`,         sub: 'Days in a row',  color:'#ff7c2a', pct: Math.min((streak / 30) * 100, 100) },
-    { icon:'✅', label:'Accuracy',   value: `${accuracy}%`,       sub: 'Avg correctness',color:'#60a5fa', pct: accuracy },
+    { icon:'⚡', label: t.stats.xpEarned,   value: xp.toLocaleString(), sub: t.stats.totalPoints,    color:'#c8ff00', pct: Math.min((xp / 5000) * 100, 100) },
+    { icon:'🎯', label: t.stats.level,      value: level,                sub: t.stats.keepClimbing,   color:'#a3e635', pct: (level / 10) * 100 },
+    { icon:'🔥', label: t.stats.streak,     value: `${streak}d`,         sub: t.stats.daysInARow,     color:'#ff7c2a', pct: Math.min((streak / 30) * 100, 100) },
+    { icon:'✅', label: t.stats.accuracy,   value: `${accuracy}%`,       sub: t.stats.avgCorrectness, color:'#60a5fa', pct: accuracy },
   ]
 
+  // ✅ return এখানে — DashboardPage function এর ভেতরে
   return (
-    <AppLayout title="Dashboard">
+    <AppLayout title={t.nav.dashboard}>
       <style>{styles}</style>
       <div className="dash-root">
 
@@ -364,9 +353,9 @@ export default function DashboardPage() {
 
           {/* ── Welcome ── */}
           <motion.div {...fade(0)}>
-            <p className="welcome-eyebrow">Learning Dashboard</p>
+            <p className="welcome-eyebrow">{t.dashboard.eyebrow}</p>
             <h2 className="welcome-heading">
-              Welcome back,&nbsp;
+              {t.dashboard.welcomeBack}&nbsp;
               <span style={{
                 background: 'linear-gradient(90deg, #c8ff00, #00ffb3)',
                 WebkitBackgroundClip: 'text',
@@ -377,7 +366,7 @@ export default function DashboardPage() {
                 {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
               </span> 👋
             </h2>
-            <p className="welcome-sub">Keep learning every day — small steps make big progress.</p>
+            <p className="welcome-sub">{t.dashboard.subtitle}</p>
             <div className="welcome-rule" />
           </motion.div>
 
@@ -408,7 +397,7 @@ export default function DashboardPage() {
           <motion.div {...fade(0.2)} className="g-card progress-hero">
             <div className="progress-hero-inner">
               <div>
-                <div className="stat-label" style={{ marginBottom:'0.6rem' }}>Your Progress</div>
+                <div className="stat-label" style={{ marginBottom:'0.6rem' }}>{t.dashboard.yourProgress}</div>
                 <div style={{ display:'flex', alignItems:'baseline', gap:'4px' }}>
                   <span className="xp-number">{xp.toLocaleString()}</span>
                   <span className="xp-unit">XP</span>
@@ -422,21 +411,21 @@ export default function DashboardPage() {
               </div>
               <div className="mastery-right">
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-                  <span style={{ fontSize:'0.75rem', color:'var(--muted)', fontWeight:600 }}>Mastery</span>
+                  <span style={{ fontSize:'0.75rem', color:'var(--muted)', fontWeight:600 }}>{t.dashboard.masteryScore}</span>
                   <span style={{ fontSize:'0.8rem', fontWeight:800, color:'var(--lime)' }}>{masteryScore}%</span>
                 </div>
                 <div className="mastery-track">
                   <div className="mastery-fill" style={{ width:`${masteryScore}%` }} />
                 </div>
                 <div className="mastery-labels">
-                  <span>Beginner</span><span>Advanced</span>
+                  <span>{t.dashboard.beginner}</span><span>{t.dashboard.advanced}</span>
                 </div>
                 <div style={{ marginTop:'0.75rem', display:'flex', flexWrap:'wrap', gap:'0.4rem' }}>
                   {loading
                     ? <Skeleton width={80} height={20} />
                     : badges.length > 0
                       ? badges.map(b => <span key={b} className="badge-pill">{b}</span>)
-                      : <span style={{ fontSize:'0.72rem', color:'var(--muted)' }}>No badges yet — keep going!</span>
+                      : <span style={{ fontSize:'0.72rem', color:'var(--muted)' }}>{t.dashboard.noBadges}</span>
                   }
                 </div>
               </div>
@@ -444,24 +433,24 @@ export default function DashboardPage() {
           </motion.div>
 
           {/* ── Weak Topics + Mastery Score ── */}
-          <p className="section-label">Analytics</p>
+          <p className="section-label">{t.dashboard.analytics}</p>
           <motion.div {...fade(0.28)} className="two-col">
 
             {/* Weak Topics */}
             <div className="g-card card-inner">
               <div className="card-header">
                 <SectionIcon color="#ff4d6d"><AlertTriangle size={15} color="#ff4d6d" /></SectionIcon>
-                <span className="card-title">Weak Topics</span>
+                <span className="card-title">{t.dashboard.weakTopics}</span>
               </div>
               {loading
                 ? [1,2,3].map(i => <Skeleton key={i} height={36} style={{ marginBottom:8 }} />)
                 : weakTopics.length === 0
-                  ? <EmptyState icon="🎉" title="No weak topics!" subtitle="Keep practicing to maintain this." />
-                  : weakTopics.slice(0, 5).map((t, i) => (
+                  ? <EmptyState icon="🎉" title={t.dashboard.noWeakTopics} subtitle={t.dashboard.noWeakTopicsSub} />
+                  : weakTopics.slice(0, 5).map((tp, i) => (
                     <div key={i} className="weak-row">
-                      <span className="weak-name">{t.topic || t}</span>
-                      {t.accuracy !== undefined && (
-                        <span className="weak-pct">{Math.round(t.accuracy)}%</span>
+                      <span className="weak-name">{tp.topic || tp}</span>
+                      {tp.accuracy !== undefined && (
+                        <span className="weak-pct">{Math.round(tp.accuracy)}%</span>
                       )}
                     </div>
                   ))
@@ -472,7 +461,7 @@ export default function DashboardPage() {
             <div className="g-card card-inner">
               <div className="card-header">
                 <SectionIcon color="#c8ff00"><Target size={15} color="#c8ff00" /></SectionIcon>
-                <span className="card-title">Mastery Score</span>
+                <span className="card-title">{t.dashboard.masteryScore}</span>
               </div>
               {loading
                 ? <Skeleton height={80} />
@@ -485,9 +474,9 @@ export default function DashboardPage() {
                     <div className="mastery-fill" style={{ width:`${masteryScore}%` }} />
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontSize:'0.72rem', color:'var(--muted)' }}>Beginner</span>
+                    <span style={{ fontSize:'0.72rem', color:'var(--muted)' }}>{t.dashboard.beginner}</span>
                     <span className="mastery-level-badge">{masteryLevel}</span>
-                    <span style={{ fontSize:'0.72rem', color:'var(--muted)' }}>Advanced</span>
+                    <span style={{ fontSize:'0.72rem', color:'var(--muted)' }}>{t.dashboard.advanced}</span>
                   </div>
                 </>
               }
@@ -497,20 +486,20 @@ export default function DashboardPage() {
           {/* ── AI Recommendation ── */}
           {recommendation && (
             <>
-              <p className="section-label">AI Insights</p>
+              <p className="section-label">{t.dashboard.aiInsights}</p>
               <motion.div {...fade(0.34)} className="g-card card-inner" style={{ marginBottom:'1rem' }}>
                 <div className="card-header">
                   <SectionIcon color="#ff7c2a"><TrendingUp size={15} color="#ff7c2a" /></SectionIcon>
-                  <span className="card-title">AI Recommendation</span>
+                  <span className="card-title">{t.dashboard.aiRecommendation}</span>
                 </div>
                 {recommendation.topic && (
-                  <span className="rec-chip">Focus: {recommendation.topic}</span>
+                  <span className="rec-chip">{t.dashboard.focusLabel}: {recommendation.topic}</span>
                 )}
                 <p className="rec-text">
                   {String(recommendation?.recommendation || '').slice(0, 180)}…
                 </p>
                 <Link href="/recommendations" className="view-btn">
-                  View Full Plan <ChevronRight size={14} />
+                  {t.dashboard.viewFullPlan} <ChevronRight size={14} />
                 </Link>
               </motion.div>
             </>
@@ -521,9 +510,9 @@ export default function DashboardPage() {
             <motion.div {...fade(0.4)} className="g-card card-inner" style={{ marginBottom:'1rem' }}>
               <div className="card-header">
                 <SectionIcon color="#00ffb3"><BookOpen size={15} color="#00ffb3" /></SectionIcon>
-                <span className="card-title">AI Remediation</span>
+                <span className="card-title">{t.dashboard.aiRemediation}</span>
               </div>
-              <div className="rem-topic">Practice Topic: {recommendation?.topic}</div>
+              <div className="rem-topic">{t.dashboard.practiceTopic}: {recommendation?.topic}</div>
               <p className="rem-text">
                 {remediation?.remediation_content?.concept_explanation}
               </p>
@@ -538,10 +527,10 @@ export default function DashboardPage() {
           {/* ── CTA ── */}
           <motion.div {...fade(0.45)} className="g-card cta-card">
             <span className="cta-emoji">🚀</span>
-            <h3 className="cta-heading">Ready to learn?</h3>
-            <p className="cta-sub">Pick a topic and let AI generate your personalized question.</p>
+            <h3 className="cta-heading">{t.dashboard.readyToLearn}</h3>
+            <p className="cta-sub">{t.dashboard.ctaSub}</p>
             <Link href="/learn" className="cta-btn">
-              <BookOpen size={18} /> Continue Learning
+              <BookOpen size={18} /> {t.dashboard.continueLearning}
             </Link>
           </motion.div>
 

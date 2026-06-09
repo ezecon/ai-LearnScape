@@ -5,9 +5,11 @@ import { CheckCircle, XCircle, Clock, BookOpen } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import { getQuestionHistory } from '@/services/api'
 import { useAuth } from '@/lib/AuthContext'
+import { useLanguage } from '@/lib/LanguageContext'
 
 export default function HistoryPage() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -20,8 +22,8 @@ export default function HistoryPage() {
   }, [user])
 
   const statusIcon = (status) => {
-    if (status === 'true')    return <CheckCircle size={16} color="#22c55e" />
-    if (status === 'false')   return <XCircle size={16} color="#ef4444" />
+    if (status === 'true')  return <CheckCircle size={16} color="#22c55e" />
+    if (status === 'false') return <XCircle size={16} color="#ef4444" />
     return <Clock size={16} color="rgba(220,224,255,0.4)" />
   }
 
@@ -31,26 +33,28 @@ export default function HistoryPage() {
     return 'rgba(255,255,255,0.04)'
   }
 
+  const h = t.history
+
   return (
-    <AppLayout title="Question History">
+    <AppLayout title={h.title}>
       <div style={{ maxWidth: 720, margin: '0 auto' }}>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 900, marginBottom: '0.4rem' }}>
-          Question History 📋
+          {h.titleEmoji}
         </h1>
         <p style={{ color: 'rgba(220,224,255,0.4)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-          All questions you've attempted
+          {h.subtitle}
         </p>
 
         {loading && (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'rgba(220,224,255,0.4)' }}>
-            Loading…
+            {h.loading}
           </div>
         )}
 
         {!loading && history.length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'rgba(220,224,255,0.4)' }}>
             <BookOpen size={40} style={{ opacity: 0.2, margin: '0 auto 1rem', display: 'block' }} />
-            No questions yet. Start learning!
+            {h.empty}
           </div>
         )}
 
@@ -68,7 +72,6 @@ export default function HistoryPage() {
                 padding: '1rem 1.2rem',
               }}
             >
-              {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   {statusIcon(item.is_correct)}
@@ -78,7 +81,7 @@ export default function HistoryPage() {
                     fontSize: '0.65rem', fontWeight: 700,
                     padding: '0.15rem 0.5rem', borderRadius: 99
                   }}>
-                    Class {item.class_level}
+                    {h.classLabel} {item.class_level}
                   </span>
                 </div>
                 <span style={{ fontSize: '0.7rem', color: 'rgba(220,224,255,0.35)' }}>
@@ -88,12 +91,10 @@ export default function HistoryPage() {
                 </span>
               </div>
 
-              {/* Question */}
               <p style={{ fontSize: '0.85rem', color: 'rgba(220,224,255,0.7)', lineHeight: 1.6, marginBottom: 8 }}>
                 {item.question}
               </p>
 
-              {/* Answers */}
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {item.correct_answer && (
                   <div style={{
@@ -101,7 +102,7 @@ export default function HistoryPage() {
                     borderRadius: 8, padding: '0.3rem 0.7rem',
                     fontSize: '0.75rem', color: '#22c55e'
                   }}>
-                    ✓ {item.correct_answer}
+                    {h.correctAnswer} {item.correct_answer}
                   </div>
                 )}
                 {item.student_answer && (
@@ -110,7 +111,7 @@ export default function HistoryPage() {
                     borderRadius: 8, padding: '0.3rem 0.7rem',
                     fontSize: '0.75rem', color: 'rgba(220,224,255,0.5)'
                   }}>
-                    You: {item.student_answer}
+                    {h.yourAnswer} {item.student_answer}
                   </div>
                 )}
               </div>

@@ -9,6 +9,7 @@ import {
 import { useAuth } from '@/lib/AuthContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { History } from 'lucide-react'
+import { useLanguage } from '@/lib/LanguageContext'
 
 // NAV array তে যোগ করো:
 
@@ -203,7 +204,7 @@ function SidebarContent({ onClose }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, signOut } = useAuth()
-
+ const { lang, toggleLanguage, t } = useLanguage()
   const handleLogout = async () => {
     await signOut()
     router.push('/login')
@@ -271,6 +272,32 @@ function SidebarContent({ onClose }) {
             )
           })}
         </nav>
+          
+
+            <button
+      onClick={toggleLanguage}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.6rem',
+        width: '100%',
+        padding: '0.6rem 1.1rem',
+        borderRadius: '10px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.04)',
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: '0.82rem',
+        fontWeight: 600,
+        cursor: 'pointer',
+        marginBottom: '0.5rem',
+        transition: 'all 0.2s',
+        fontFamily: 'DM Sans, sans-serif',
+      }}
+    >
+      <span style={{ fontSize: '1rem' }}>{lang === 'en' ? '🇧🇩' : '🇬🇧'}</span>
+      {lang === 'en' ? 'বাংলা' : 'English'}
+    </button>
+
 
         {/* Footer */}
         <div className="sb-footer">

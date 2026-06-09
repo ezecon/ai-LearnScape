@@ -7,6 +7,7 @@ import { Trophy, Star, Flame, Crown, Zap, RefreshCw } from 'lucide-react'
 import AppLayout from '@/components/layout/AppLayout'
 import { Spinner } from '@/components/ui'
 import { getLeaderboard } from '@/services/api'
+import { useLanguage } from '@/lib/LanguageContext'
 import toast from 'react-hot-toast'
 
 /* ─── Global Styles ──────────────────────────────────────────────────────────── */
@@ -32,230 +33,73 @@ const GlobalStyles = () => (
     .lb-root { font-family: 'Outfit', sans-serif; background: var(--lb-bg); min-height: 100vh; color: var(--lb-text); }
     .lb-root * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Background ── */
-    .lb-bg {
-      position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
-    }
-    .lb-bg-orb {
-      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.07;
-      animation: orbDrift 18s ease-in-out infinite alternate;
-    }
+    .lb-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .lb-bg-orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.07; animation: orbDrift 18s ease-in-out infinite alternate; }
     .lb-bg-orb-1 { width: 600px; height: 600px; background: var(--lb-gold); top: -200px; left: -100px; animation-duration: 14s; }
     .lb-bg-orb-2 { width: 500px; height: 500px; background: var(--lb-accent); bottom: -150px; right: -100px; animation-duration: 20s; animation-direction: alternate-reverse; }
     .lb-bg-orb-3 { width: 300px; height: 300px; background: var(--lb-green); top: 40%; left: 50%; opacity: 0.04; animation-duration: 25s; }
-    @keyframes orbDrift {
-      from { transform: translate(0,0) scale(1); }
-      to   { transform: translate(30px, 40px) scale(1.1); }
-    }
+    @keyframes orbDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(30px, 40px) scale(1.1); } }
 
-    /* Scanlines */
-    .lb-scanlines {
-      position: fixed; inset: 0; z-index: 1; pointer-events: none;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
-    }
+    .lb-scanlines { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px); }
 
     .lb-wrap { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; }
 
-    /* ── Header ── */
     .lb-header { text-align: center; margin-bottom: 2.5rem; }
-    .lb-trophy-icon {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 64px; height: 64px; border-radius: 20px;
-      background: linear-gradient(135deg, rgba(255,209,102,0.2), rgba(255,209,102,0.05));
-      border: 1px solid rgba(255,209,102,0.3);
-      margin-bottom: 1rem;
-      animation: iconPulse 3s ease-in-out infinite;
-    }
-    @keyframes iconPulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(255,209,102,0); }
-      50%      { box-shadow: 0 0 0 12px rgba(255,209,102,0.08); }
-    }
-    .lb-title {
-      font-family: 'Unbounded', sans-serif;
-      font-size: clamp(1.8rem, 5vw, 2.6rem);
-      font-weight: 900; letter-spacing: -0.02em;
-      line-height: 1.1;
-      background: linear-gradient(135deg, #ffd166 0%, #ffedaa 50%, #ffc842 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
+    .lb-trophy-icon { display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(135deg, rgba(255,209,102,0.2), rgba(255,209,102,0.05)); border: 1px solid rgba(255,209,102,0.3); margin-bottom: 1rem; animation: iconPulse 3s ease-in-out infinite; }
+    @keyframes iconPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,209,102,0); } 50% { box-shadow: 0 0 0 12px rgba(255,209,102,0.08); } }
+    .lb-title { font-family: 'Unbounded', sans-serif; font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; background: linear-gradient(135deg, #ffd166 0%, #ffedaa 50%, #ffc842 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .lb-subtitle { color: var(--lb-muted); font-size: 0.85rem; margin-top: 0.5rem; font-weight: 400; }
 
-    /* ── Podium ── */
-    .lb-podium {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      align-items: end; gap: 8px;
-      margin-bottom: 2rem;
-    }
-
-    .lb-podium-card {
-      border-radius: 18px 18px 14px 14px;
-      padding: 1.25rem 0.75rem 1rem;
-      text-align: center;
-      border: 1px solid transparent;
-      position: relative; overflow: hidden;
-      transition: transform 0.3s;
-      cursor: default;
-    }
+    .lb-podium { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; gap: 8px; margin-bottom: 2rem; }
+    .lb-podium-card { border-radius: 18px 18px 14px 14px; padding: 1.25rem 0.75rem 1rem; text-align: center; border: 1px solid transparent; position: relative; overflow: hidden; transition: transform 0.3s; cursor: default; }
     .lb-podium-card:hover { transform: translateY(-4px); }
-
-    /* Gold */
-    .lb-podium-card.gold {
-      background: linear-gradient(160deg, rgba(255,209,102,0.13) 0%, rgba(255,209,102,0.04) 100%);
-      border-color: rgba(255,209,102,0.3);
-      padding-top: 1.75rem;
-    }
-    /* Silver */
-    .lb-podium-card.silver {
-      background: linear-gradient(160deg, rgba(184,196,216,0.1) 0%, rgba(184,196,216,0.03) 100%);
-      border-color: rgba(184,196,216,0.25);
-    }
-    /* Bronze */
-    .lb-podium-card.bronze {
-      background: linear-gradient(160deg, rgba(224,122,68,0.1) 0%, rgba(224,122,68,0.03) 100%);
-      border-color: rgba(224,122,68,0.25);
-    }
-
-    /* Glow strip */
-    .lb-podium-card::before {
-      content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
-    }
-    .gold::before   { background: linear-gradient(90deg, transparent, var(--lb-gold), transparent); }
+    .lb-podium-card.gold { background: linear-gradient(160deg, rgba(255,209,102,0.13) 0%, rgba(255,209,102,0.04) 100%); border-color: rgba(255,209,102,0.3); padding-top: 1.75rem; }
+    .lb-podium-card.silver { background: linear-gradient(160deg, rgba(184,196,216,0.1) 0%, rgba(184,196,216,0.03) 100%); border-color: rgba(184,196,216,0.25); }
+    .lb-podium-card.bronze { background: linear-gradient(160deg, rgba(224,122,68,0.1) 0%, rgba(224,122,68,0.03) 100%); border-color: rgba(224,122,68,0.25); }
+    .lb-podium-card::before { content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px; }
+    .gold::before { background: linear-gradient(90deg, transparent, var(--lb-gold), transparent); }
     .silver::before { background: linear-gradient(90deg, transparent, var(--lb-silver), transparent); }
     .bronze::before { background: linear-gradient(90deg, transparent, var(--lb-bronze), transparent); }
-
-    .lb-rank-crown {
-      position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
-      font-size: 1.1rem; line-height: 1;
-    }
-
-    .lb-podium-avatar {
-      width: 52px; height: 52px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Unbounded', sans-serif;
-      font-size: 1.1rem; font-weight: 900;
-      margin: 0 auto 0.6rem;
-      position: relative;
-    }
-    .lb-podium-avatar.gold   { background: linear-gradient(135deg, #ffd166, #ffb300); color: #3a2000; }
+    .lb-rank-crown { position: absolute; top: -1px; left: 50%; transform: translateX(-50%); font-size: 1.1rem; line-height: 1; }
+    .lb-podium-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Unbounded', sans-serif; font-size: 1.1rem; font-weight: 900; margin: 0 auto 0.6rem; position: relative; }
+    .lb-podium-avatar.gold { background: linear-gradient(135deg, #ffd166, #ffb300); color: #3a2000; }
     .lb-podium-avatar.silver { background: linear-gradient(135deg, #b8c4d8, #8ea0b8); color: #1a2030; }
     .lb-podium-avatar.bronze { background: linear-gradient(135deg, #e07a44, #c55a24); color: #2a1000; }
-
-    .lb-podium-name {
-      font-weight: 700; font-size: 0.82rem; color: var(--lb-text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      margin-bottom: 4px;
-    }
-    .lb-podium-xp {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 0.9rem; font-weight: 800;
-    }
-    .lb-podium-xp.gold   { color: var(--lb-gold); }
+    .lb-podium-name { font-weight: 700; font-size: 0.82rem; color: var(--lb-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+    .lb-podium-xp { font-family: 'Unbounded', sans-serif; font-size: 0.9rem; font-weight: 800; }
+    .lb-podium-xp.gold { color: var(--lb-gold); }
     .lb-podium-xp.silver { color: var(--lb-silver); }
     .lb-podium-xp.bronze { color: var(--lb-bronze); }
     .lb-podium-level { font-size: 0.7rem; color: var(--lb-muted); margin-top: 2px; font-weight: 500; }
+    .lb-podium-pos { position: absolute; bottom: 0; left: 0; right: 0; font-family: 'Unbounded', sans-serif; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.08em; opacity: 0.5; padding: 0.25rem; text-align: center; }
 
-    .lb-podium-pos {
-      position: absolute; bottom: 0; left: 0; right: 0;
-      font-family: 'Unbounded', sans-serif;
-      font-size: 0.65rem; font-weight: 800;
-      letter-spacing: 0.08em; opacity: 0.5;
-      padding: 0.25rem; text-align: center;
-    }
-
-    /* ── Rankings list ── */
     .lb-list { display: flex; flex-direction: column; gap: 8px; }
-
-    .lb-row {
-      background: var(--lb-card);
-      border: 1px solid var(--lb-border);
-      border-radius: 14px;
-      padding: 0.9rem 1.1rem;
-      display: flex; align-items: center; gap: 12px;
-      transition: border-color 0.25s, transform 0.25s, background 0.25s;
-      cursor: default;
-      position: relative; overflow: hidden;
-    }
-    .lb-row:hover {
-      border-color: rgba(110,231,255,0.2);
-      background: rgba(16,17,30,0.9);
-      transform: translateX(4px);
-    }
-
-    /* Hover left glow bar */
-    .lb-row::before {
-      content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
-      width: 2px; background: var(--lb-accent);
-      border-radius: 999px; opacity: 0;
-      transition: opacity 0.25s;
-    }
+    .lb-row { background: var(--lb-card); border: 1px solid var(--lb-border); border-radius: 14px; padding: 0.9rem 1.1rem; display: flex; align-items: center; gap: 12px; transition: border-color 0.25s, transform 0.25s, background 0.25s; cursor: default; position: relative; overflow: hidden; }
+    .lb-row:hover { border-color: rgba(110,231,255,0.2); background: rgba(16,17,30,0.9); transform: translateX(4px); }
+    .lb-row::before { content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 2px; background: var(--lb-accent); border-radius: 999px; opacity: 0; transition: opacity 0.25s; }
     .lb-row:hover::before { opacity: 0.6; }
-
-    .lb-row-rank {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 0.75rem; font-weight: 800;
-      color: var(--lb-muted); min-width: 28px; text-align: center;
-    }
-
-    .lb-row-avatar {
-      width: 38px; height: 38px; border-radius: 12px;
-      background: rgba(110,231,255,0.1); border: 1px solid rgba(110,231,255,0.15);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 0.85rem; color: var(--lb-accent);
-      flex-shrink: 0;
-    }
-
+    .lb-row-rank { font-family: 'Unbounded', sans-serif; font-size: 0.75rem; font-weight: 800; color: var(--lb-muted); min-width: 28px; text-align: center; }
+    .lb-row-avatar { width: 38px; height: 38px; border-radius: 12px; background: rgba(110,231,255,0.1); border: 1px solid rgba(110,231,255,0.15); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; color: var(--lb-accent); flex-shrink: 0; }
     .lb-row-info { flex: 1; min-width: 0; }
     .lb-row-name { font-weight: 700; font-size: 0.9rem; color: var(--lb-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .lb-row-badges { font-size: 0.72rem; color: var(--lb-muted); margin-top: 1px; }
-
     .lb-row-right { text-align: right; flex-shrink: 0; }
-    .lb-row-xp {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 0.85rem; font-weight: 800; color: var(--lb-green);
-    }
+    .lb-row-xp { font-family: 'Unbounded', sans-serif; font-size: 0.85rem; font-weight: 800; color: var(--lb-green); }
     .lb-row-level { font-size: 0.7rem; color: var(--lb-muted); margin-top: 2px; }
-
-    /* XP progress bar on row */
     .lb-row-bar-wrap { position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.04); }
-    .lb-row-bar { height: 100%; background: linear-gradient(90deg, var(--lb-accent), var(--lb-green)); border-radius: 0 999px 999px 0; transition: width 1s ease; }
+    .lb-row-bar { height: 100%; background: linear-gradient(90deg, var(--lb-accent), var(--lb-green)); border-radius: 0 999px 999px 0; }
 
-    /* ── Section label ── */
-    .lb-section-label {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 0.6rem; font-weight: 800;
-      letter-spacing: 0.15em; text-transform: uppercase;
-      color: var(--lb-muted); margin-bottom: 0.75rem; padding-left: 4px;
-      display: flex; align-items: center; gap: 8px;
-    }
+    .lb-section-label { font-family: 'Unbounded', sans-serif; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; color: var(--lb-muted); margin-bottom: 0.75rem; padding-left: 4px; display: flex; align-items: center; gap: 8px; }
     .lb-section-label::after { content: ''; flex: 1; height: 1px; background: var(--lb-border); }
 
-    /* ── Empty ── */
-    .lb-empty {
-      text-align: center; padding: 4rem 1rem;
-      color: var(--lb-muted); font-size: 0.9rem;
-    }
+    .lb-empty { text-align: center; padding: 4rem 1rem; color: var(--lb-muted); font-size: 0.9rem; }
 
-    /* ── Loading ── */
-    .lb-loading {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 5rem; gap: 1rem;
-    }
-    .lb-loading-ring {
-      width: 44px; height: 44px; border-radius: 50%;
-      border: 2px solid rgba(255,209,102,0.15);
-      border-top-color: var(--lb-gold);
-      animation: spin 0.8s linear infinite;
-    }
+    .lb-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem; gap: 1rem; }
+    .lb-loading-ring { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,209,102,0.15); border-top-color: var(--lb-gold); animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .lb-loading-text { color: var(--lb-muted); font-size: 0.85rem; }
 
-    /* You badge */
-    .lb-you { 
-      background: rgba(110,231,255,0.12); border: 1px solid rgba(110,231,255,0.3);
-      color: var(--lb-accent); font-size: 0.6rem; font-weight: 700;
-      padding: 0.15rem 0.45rem; border-radius: 999px; letter-spacing: 0.08em;
-      margin-left: 6px; vertical-align: middle;
-    }
+    .lb-you { background: rgba(110,231,255,0.12); border: 1px solid rgba(110,231,255,0.3); color: var(--lb-accent); font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 999px; letter-spacing: 0.08em; margin-left: 6px; vertical-align: middle; }
 
     @media (max-width: 480px) {
       .lb-podium-avatar { width: 42px; height: 42px; font-size: 0.9rem; }
@@ -279,14 +123,10 @@ const fadeUp = {
   })
 }
 
-const podiumOrder = [1, 0, 2] // silver, gold, bronze visual order
-
 /* ─── Podium Card ────────────────────────────────────────────────────────────── */
-function PodiumCard({ user, rank, delay }) {
+function PodiumCard({ user, rank, delay, positions }) {
   const cls = ['gold', 'silver', 'bronze'][rank]
   const crowns = ['👑', null, null]
-  const positions = ['1st', '2nd', '3rd']
-  const heightBonus = rank === 0 ? 'paddingTop: 1.75rem' : ''
 
   return (
     <motion.div
@@ -306,6 +146,9 @@ function PodiumCard({ user, rank, delay }) {
 
 /* ─── Page ───────────────────────────────────────────────────────────────────── */
 export default function LeaderboardPage() {
+  const { t } = useLanguage()
+  const lb = t.leaderboard
+
   const [loading, setLoading] = useState(true)
   const [leaders, setLeaders] = useState([])
 
@@ -317,21 +160,21 @@ export default function LeaderboardPage() {
       const data = await getLeaderboard()
       setLeaders(data || [])
     } catch {
-      toast.error('Failed to load leaderboard')
+      toast.error(t.common.error)
     } finally {
       setLoading(false)
     }
   }
-const safeLeaders = Array.isArray(leaders) ? leaders : []
 
-const top3 = safeLeaders.slice(0, 3)
-const rest = safeLeaders.slice(3)
-const peak = maxXp(safeLeaders)
-  // Reorder top3 for podium: [silver(1), gold(0), bronze(2)]
+  const safeLeaders = Array.isArray(leaders) ? leaders : []
+  const top3 = safeLeaders.slice(0, 3)
+  const rest = safeLeaders.slice(3)
+  const peak = maxXp(safeLeaders)
   const podiumSlots = [top3[1], top3[0], top3[2]]
+  const positions = [lb.firstPlace, lb.secondPlace, lb.thirdPlace]
 
   return (
-    <AppLayout title="Leaderboard">
+    <AppLayout title={lb.title}>
       <GlobalStyles />
       <div className="lb-root">
         <div className="lb-bg">
@@ -352,20 +195,20 @@ const peak = maxXp(safeLeaders)
             <div className="lb-trophy-icon">
               <Trophy size={28} color="var(--lb-gold)" />
             </div>
-            <h1 className="lb-title">Leaderboard</h1>
-            <p className="lb-subtitle">The best learners, ranked by XP earned</p>
+            <h1 className="lb-title">{lb.title}</h1>
+            <p className="lb-subtitle">{lb.subtitle}</p>
           </motion.div>
 
           <AnimatePresence mode="wait">
             {loading ? (
               <motion.div key="loading" className="lb-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <div className="lb-loading-ring" />
-                <p className="lb-loading-text">Loading rankings…</p>
+                <p className="lb-loading-text">{lb.loading}</p>
               </motion.div>
             ) : leaders.length === 0 ? (
               <motion.div key="empty" className="lb-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 <Trophy size={40} style={{ opacity: 0.2, margin: '0 auto 1rem', display: 'block' }} />
-                No learners yet. Be the first!
+                {lb.empty}
               </motion.div>
             ) : (
               <motion.div key="content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -376,11 +219,10 @@ const peak = maxXp(safeLeaders)
                     <div className="lb-section-label"><Star size={10} /> Hall of Fame</div>
                     <div className="lb-podium">
                       {podiumSlots.map((user, visualIdx) => {
-                        // map visual slot back to rank
                         const rankMap = [1, 0, 2]
                         const rank = rankMap[visualIdx]
                         return user
-                          ? <PodiumCard key={rank} user={user} rank={rank} delay={visualIdx + 1} />
+                          ? <PodiumCard key={rank} user={user} rank={rank} delay={visualIdx + 1} positions={positions} />
                           : <div key={visualIdx} />
                       })}
                     </div>

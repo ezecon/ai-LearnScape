@@ -75,7 +75,8 @@ export async function submitAnswer(
 
 export async function getRecommendation(
   userId,
-  classLevel
+  classLevel,
+  language = 'en'
 ) {
 
   const token =
@@ -84,7 +85,7 @@ export async function getRecommendation(
   const res =
     await fetch(
 
-      `${BASE_URL}/performance/recommendation/${userId}/${classLevel}`,
+      `${BASE_URL}/performance/recommendation/${userId}/${classLevel}?language=${language}`,
 
       {
         headers: {
@@ -101,7 +102,8 @@ export async function generateQuestion(
   userId,
   topic,
   environment = "General",
-  classLevel = 6
+  classLevel = 6,
+  language = 'en'
 ) {
 
   const token =
@@ -133,7 +135,8 @@ export async function generateQuestion(
           environment,
 
           class_level:
-          classLevel
+          classLevel,
+          language,
         })
       }
     );
@@ -202,12 +205,13 @@ export async function getMastery(
 
 export async function getRemediation(
   userId,
-  classLevel
+  classLevel,
+  language = 'en'
 ) {
   const token = await getToken();
 
   const res = await fetch(
-    `${BASE_URL}/performance/remediation/${userId}/${classLevel}`,
+    `${BASE_URL}/performance/remediation/${userId}/${classLevel}?language=${language}`,
     {
       headers: {
         Authorization: `Bearer ${token}`

@@ -24,6 +24,7 @@ import {
   getWeakTopics
 } from '@/services/api'
 import { useAuth } from '@/lib/AuthContext'
+import { useLanguage } from '@/lib/LanguageContext'
 import toast from 'react-hot-toast'
 
 // ─── Inline styles & keyframes via <style> ────────────────────────────────────
@@ -290,6 +291,8 @@ const fadeUp = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function RecommendationPage() {
   const { user } = useAuth()
+  const { t, lang } = useLanguage()
+  const rec = t.recommendations
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [recommendation, setRecommendation] = useState(null)
@@ -305,8 +308,8 @@ export default function RecommendationPage() {
       else setLoading(true)
 
       const [rec, rem, weak] = await Promise.all([
-        getRecommendation(user.id, classLevel),
-        getRemediation(user.id, classLevel),
+        getRecommendation(user.id, classLevel, lang),
+        getRemediation(user.id, classLevel, lang),
         getWeakTopics(user.id)
       ])
       setRecommendation(rec)
@@ -314,7 +317,7 @@ export default function RecommendationPage() {
       setWeakTopics(Array.isArray(weak) ? weak : [])
     } catch (err) {
       console.error(err)
-      toast.error('Failed to load recommendation')
+      toast.error(t.common.error)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -330,7 +333,7 @@ export default function RecommendationPage() {
   const recNote = remediation?.recommendation?.recommendation
 
   return (
-    <AppLayout title="Recommendations">
+    <AppLayout title={rec.title}>
       <GlobalStyles />
       <div className="rec-root">
         <div className="rec-bg-mesh" />
@@ -367,7 +370,7 @@ export default function RecommendationPage() {
                 exit={{ opacity: 0 }}
               >
                 <div className="rec-loading-ring" />
-                <p className="rec-loading-text">Analysing your performance…</p>
+                <p className="rec-loading-text">{rec.loading}</p>
               </motion.div>
             ) : (
               <motion.div
@@ -384,7 +387,7 @@ export default function RecommendationPage() {
                 >
                   {[
                     { icon: <Target size={16} color="var(--rec-lime)" />, val: focusTopic.split(' ')[0], label: 'Focus Area' },
-                    { icon: <Zap size={16} color="var(--rec-orange)" />, val: weakTopics.length || '0', label: 'Weak Topics' },
+                    { icon: <Zap size={16} color="var(--rec-orange)" />, val: weakTopics.length || '0', label: rec.weakTopics },
                     { icon: <TrendingUp size={16} color="var(--rec-blue)" />, val: `Cl. ${classLevel}`, label: 'Your Level' },
                   ].map((s, i) => (
                     <div className="rec-stat" key={i}>
@@ -406,7 +409,7 @@ export default function RecommendationPage() {
                     <div className="rec-icon-wrap icon-red">
                       <AlertTriangle size={15} color="var(--rec-red)" />
                     </div>
-                    <span className="rec-card-label-text label-red">Weak Topics</span>
+                    <span className="rec-card-label-text label-red">{rec.weakTopics}</span>
                   </div>
                   <div className="rec-divider" />
                   <div className="topic-chips">
@@ -419,7 +422,7 @@ export default function RecommendationPage() {
                       : (
                         <p className="no-topics">
                           <span>🎉</span>
-                          No weak topics detected — you're on fire!
+                          {rec.noWeakTopics}
                         </p>
                       )
                     }
@@ -437,7 +440,7 @@ export default function RecommendationPage() {
                     <div className="rec-icon-wrap icon-lime">
                       <Sparkles size={15} color="var(--rec-lime)" />
                     </div>
-                    <span className="rec-card-label-text label-lime">AI Recommendation</span>
+                    <span className="rec-card-label-text label-lime">{rec.aiRecommendation}</span>
                   </div>
                   <div className="rec-divider" />
                   <div className="rec-focus-row">
@@ -458,18 +461,18 @@ export default function RecommendationPage() {
                     <div className="rec-icon-wrap icon-orange">
                       <BookOpen size={15} color="var(--rec-orange)" />
                     </div>
-                    <span className="rec-card-label-text label-orange">Personalized Lesson</span>
+                    <span className="rec-card-label-text label-orange">{rec.remediationPlan}</span>
                   </div>
                   <div className="rec-divider" />
                   <p className="rec-body">
-                    {concept || 'No remediation available yet. Keep practising to unlock personalized lessons.'}
+                    {concept || rec.noRecommendation}
                   </p>
 
                   {example && (
                     <div className="rec-example">
                       <div className="rec-example-header">
                         <Lightbulb size={13} />
-                        Worked Example
+                        {rec.example}
                       </div>
                       <p className="rec-example-body">{example}</p>
                     </div>
@@ -496,12 +499,12 @@ export default function RecommendationPage() {
                     <span className={refreshing ? 'spin' : ''}>
                       <RefreshCw size={15} />
                     </span>
-                    {refreshing ? 'Refreshing…' : 'Refresh'}
+                    {refreshing ? rec.loading : rec.refresh}
                   </button>
 
                   <Link href="/learn" className="rec-btn rec-btn-ghost">
                     <ArrowRight size={15} />
-                    Practice Now
+                    {rec.practiceNow}
                   </Link>
                 </motion.div>
 

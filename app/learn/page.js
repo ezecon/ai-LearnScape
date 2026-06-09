@@ -6,7 +6,7 @@ import {
   Lightbulb, BookOpen, ArrowRight, RotateCcw,
   Eye, Sparkles, ChevronDown, Brain
 } from 'lucide-react'
-
+import { useLanguage } from '@/lib/LanguageContext'
 import AppLayout from '@/components/layout/AppLayout'
 import { Spinner } from '@/components/ui'
 import { generateQuestion, submitAnswer, getRemediation, saveQuestionHistory, updateQuestionHistory } from '@/services/api'
@@ -400,6 +400,7 @@ const slideUp = {
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function LearnPage() {
   const { user } = useAuth()
+  const { lang } = useLanguage()
   const [historyId, setHistoryId] = useState(null)
   const [step, setStep]               = useState(STEP.SETUP)
   const [classLevel, setClassLevel]   = useState(8)
@@ -440,11 +441,12 @@ export default function LearnPage() {
 
   // ── Generate question ───────────────────────────────────────────────────────
 const handleGenerate = async () => {
+  console.log("CLICKED")
   if (!topic) { toast.error('Select a topic first'); return }
   setLoadingQ(true)
   resetAll()
   try {
-    const res = await generateQuestion(user?.id || 'guest', topic, environment, classLevel)
+    const res = await generateQuestion(user?.id || 'guest', topic, environment, classLevel, lang)
     const parsed = typeof res.content === 'string' ? parseContent(res.content) : res.content
     setContent(parsed)
     setStep(STEP.CONCEPT)
