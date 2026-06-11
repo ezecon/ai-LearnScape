@@ -437,6 +437,7 @@ export default function LearnPage() {
     setRemediation(null); setIsCorrect(null); setAiFeedback('')
     setConceptShown(false); setShowExplanation(false)
     setShowExample(false); setShowSteps(false); setShowAnswer(false)
+    setHistoryId(null)
   }
 
   // ── Generate question ───────────────────────────────────────────────────────
@@ -496,9 +497,10 @@ const handleGenerate = async () => {
       setSessionScore(s => ({ correct: s.correct + (is_correct ? 1 : 0), total: s.total + 1 }))
       setStep(STEP.RESULT)
       // history update
-      if (historyId) {
+      const currentHistoryId = historyId
+      if (currentHistoryId) {
         try {
-          await updateQuestionHistory(historyId, answer, String(is_correct))
+          await updateQuestionHistory(currentHistoryId, answer, String(is_correct))
         } catch (e) {
           console.error('History update failed:', e)
         }
